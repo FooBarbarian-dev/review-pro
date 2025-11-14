@@ -27,6 +27,15 @@ from temporalio.worker import Worker
 # Import workflows and activities
 from workflows.hello_workflow import SayHello, say_hello
 from workflows.llm_test_workflow import TestLLMWorkflow, call_llm_agent
+from workflows.scan_workflow import (
+    ScanRepositoryWorkflow,
+    clone_repository,
+    run_semgrep_scan,
+    run_bandit_scan,
+    run_ruff_scan,
+    parse_and_store_findings,
+    cleanup_scan_directory,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +57,21 @@ async def main():
     worker = Worker(
         client,
         task_queue=task_queue,
-        workflows=[SayHello, TestLLMWorkflow],
-        activities=[say_hello, call_llm_agent],
+        workflows=[
+            SayHello,
+            TestLLMWorkflow,
+            ScanRepositoryWorkflow,
+        ],
+        activities=[
+            say_hello,
+            call_llm_agent,
+            clone_repository,
+            run_semgrep_scan,
+            run_bandit_scan,
+            run_ruff_scan,
+            parse_and_store_findings,
+            cleanup_scan_directory,
+        ],
     )
 
     logger.info("Worker started successfully. Press Ctrl+C to exit.")
