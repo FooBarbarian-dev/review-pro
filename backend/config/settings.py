@@ -197,16 +197,10 @@ CACHES = {
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 SESSION_CACHE_ALIAS = 'default'
 
-# Celery Configuration
-CELERY_BROKER_URL = REDIS_URL
-CELERY_RESULT_BACKEND = REDIS_URL
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = TIME_ZONE
-CELERY_TASK_TRACK_STARTED = True
-CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
-CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes
+# Temporal Configuration (replaced Celery - see GAP_ANALYSIS.md)
+TEMPORAL_HOST = env('TEMPORAL_HOST', default='localhost:7233')
+TEMPORAL_NAMESPACE = env('TEMPORAL_NAMESPACE', default='default')
+TEMPORAL_TASK_QUEUE = env('TEMPORAL_TASK_QUEUE', default='code-analysis')
 
 # S3/Object Storage Configuration (ADR-005)
 USE_S3 = env.bool('USE_S3', default=False)

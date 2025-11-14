@@ -131,6 +131,62 @@ services:
     volumes:
       - ./backend:/app
 
+  # Temporal Server (Workflow Orchestration - replaces Celery)
+  temporal:
+    image: temporalio/auto-setup:latest
+    container_name: secanalysis_temporal
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PWD=postgres
+      - POSTGRES_SEEDS=db
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+    ports:
+      - "7233:7233"  # gRPC
+      - "8233:8233"  # Web UI
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - temporal_data:/etc/temporal
+
+  # Temporal Worker (Executes Workflows)
+  temporal-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: secanalysis_temporal_worker
+    command: python workers/temporal_worker.py
+    environment:
+      - TEMPORAL_HOST=temporal:7233
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/secanalysis
+      - REDIS_URL=redis://redis:6379/0
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+    env_file:
+      - .env
+    depends_on:
+      - temporal
+      - db
+      - redis
+      - qdrant
+    volumes:
+      - ./backend:/app
+      - /var/run/docker.sock:/var/run/docker.sock  # For running SA tool containers
+
+  # Qdrant Vector Database (for semantic clustering and RAG)
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: secanalysis_qdrant
+    ports:
+      - "6333:6333"  # HTTP
+      - "6334:6334"  # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+
   # Nginx (Optional - for production)
   # nginx:
   #   image: nginx:alpine
@@ -151,6 +207,8 @@ volumes:
   minio_data:
   static_volume:
   media_volume:
+  temporal_data:
+  qdrant_data:
 
 networks:
   default:
