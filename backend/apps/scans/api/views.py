@@ -10,6 +10,10 @@ from apps.scans.api.serializers import (
     ScanListSerializer, ScanDetailSerializer, ScanCreateSerializer,
     TriggerAdjudicationSerializer, TriggerClusteringSerializer
 )
+from services.temporal_client import TemporalService, run_async
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ScanViewSet(viewsets.ModelViewSet):
@@ -55,23 +59,95 @@ class ScanViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # TODO: Implement Temporal workflow trigger
-        # For now, return a placeholder response
-        return Response(
-            {"detail": "Scan creation not yet implemented. Need to integrate Temporal client."},
-            status=status.HTTP_501_NOT_IMPLEMENTED
+        # Create the scan record
+        scan = serializer.save(
+            triggered_by=request.user if request.user.is_authenticated else None,
+            status='queued'
         )
+
+        try:
+            # Trigger the scan workflow
+            repository = scan.repository
+            repo_url = repository.clone_url if hasattr(repository, 'clone_url') else None
+
+            result = run_async(
+                TemporalService.trigger_scan_workflow(
+                    scan_id=str(scan.id),
+                    repo_url=repo_url
+                )
+            )
+
+            # Return the created scan details with workflow info
+            response_data = ScanDetailSerializer(scan).data
+            response_data['workflow'] = result
+
+            return Response(response_data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            logger.error(f"Failed to trigger scan workflow: {e}")
+            # Update scan status to failed
+            scan.status = 'failed'
+            scan.error_message = str(e)
+            scan.save()
+
+            return Response(
+                {
+                    "error": "Failed to start scan workflow",
+                    "detail": str(e),
+                    "scan_id": str(scan.id)
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=True, methods=['post'])
     def rescan(self, request, pk=None):
         """Trigger a re-scan for the same repository/branch/commit."""
-        scan = self.get_object()
+        original_scan = self.get_object()
 
-        # TODO: Implement re-scan logic (create new scan with same params)
-        return Response(
-            {"detail": "Re-scan not yet implemented."},
-            status=status.HTTP_501_NOT_IMPLEMENTED
+        # Create a new scan with the same parameters
+        new_scan = Scan.objects.create(
+            organization=original_scan.organization,
+            repository=original_scan.repository,
+            branch=original_scan.branch,
+            commit_sha=original_scan.commit_sha,
+            triggered_by=request.user if request.user.is_authenticated else original_scan.triggered_by,
+            trigger_type='manual',
+            status='queued'
         )
+
+        try:
+            # Trigger the scan workflow
+            repository = new_scan.repository
+            repo_url = repository.clone_url if hasattr(repository, 'clone_url') else None
+
+            result = run_async(
+                TemporalService.trigger_scan_workflow(
+                    scan_id=str(new_scan.id),
+                    repo_url=repo_url
+                )
+            )
+
+            # Return the new scan details with workflow info
+            response_data = ScanDetailSerializer(new_scan).data
+            response_data['workflow'] = result
+            response_data['original_scan_id'] = str(original_scan.id)
+
+            return Response(response_data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            logger.error(f"Failed to trigger rescan workflow: {e}")
+            # Update scan status to failed
+            new_scan.status = 'failed'
+            new_scan.error_message = str(e)
+            new_scan.save()
+
+            return Response(
+                {
+                    "error": "Failed to start rescan workflow",
+                    "detail": str(e),
+                    "scan_id": str(new_scan.id),
+                    "original_scan_id": str(original_scan.id)
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=True, methods=['post'])
     def adjudicate(self, request, pk=None):
@@ -91,15 +167,26 @@ class ScanViewSet(viewsets.ModelViewSet):
         serializer = TriggerAdjudicationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # TODO: Implement Temporal AdjudicateFindingsWorkflow trigger
-        return Response(
-            {
-                "detail": "Adjudication workflow trigger not yet implemented.",
-                "scan_id": str(scan.id),
-                "config": serializer.validated_data
-            },
-            status=status.HTTP_501_NOT_IMPLEMENTED
-        )
+        try:
+            # Trigger the adjudication workflow
+            result = run_async(
+                TemporalService.trigger_adjudication_workflow(
+                    scan_id=str(scan.id),
+                    provider=serializer.validated_data.get('provider', 'openai'),
+                    model=serializer.validated_data.get('model', 'gpt-4o'),
+                    pattern=serializer.validated_data.get('pattern', 'post_processing'),
+                    batch_size=serializer.validated_data.get('batch_size', 10),
+                    max_findings=serializer.validated_data.get('max_findings', 100)
+                )
+            )
+
+            return Response(result, status=status.HTTP_202_ACCEPTED)
+        except Exception as e:
+            logger.error(f"Failed to trigger adjudication workflow: {e}")
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=True, methods=['post'])
     def cluster(self, request, pk=None):
@@ -116,29 +203,44 @@ class ScanViewSet(viewsets.ModelViewSet):
         serializer = TriggerClusteringSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # TODO: Implement Temporal ClusterFindingsWorkflow trigger
-        return Response(
-            {
-                "detail": "Clustering workflow trigger not yet implemented.",
-                "scan_id": str(scan.id),
-                "config": serializer.validated_data
-            },
-            status=status.HTTP_501_NOT_IMPLEMENTED
-        )
+        try:
+            # Trigger the clustering workflow
+            result = run_async(
+                TemporalService.trigger_clustering_workflow(
+                    scan_id=str(scan.id),
+                    algorithm=serializer.validated_data.get('algorithm', 'dbscan'),
+                    similarity_threshold=serializer.validated_data.get('threshold', 0.85)
+                )
+            )
+
+            return Response(result, status=status.HTTP_202_ACCEPTED)
+        except Exception as e:
+            logger.error(f"Failed to trigger clustering workflow: {e}")
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=True, methods=['post'])
     def compare_patterns(self, request, pk=None):
         """Run pattern comparison for this scan's findings."""
         scan = self.get_object()
 
-        # TODO: Implement Temporal CompareAgentPatternsWorkflow trigger
-        return Response(
-            {
-                "detail": "Pattern comparison not yet implemented.",
-                "scan_id": str(scan.id)
-            },
-            status=status.HTTP_501_NOT_IMPLEMENTED
-        )
+        try:
+            # Trigger the pattern comparison workflow
+            result = run_async(
+                TemporalService.trigger_pattern_comparison_workflow(
+                    scan_id=str(scan.id)
+                )
+            )
+
+            return Response(result, status=status.HTTP_202_ACCEPTED)
+        except Exception as e:
+            logger.error(f"Failed to trigger pattern comparison workflow: {e}")
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=True, methods=['get'], url_path='pattern-comparison')
     def pattern_comparison(self, request, pk=None):
