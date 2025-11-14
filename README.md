@@ -1,85 +1,145 @@
-# Security Analysis Platform
+# Static Analysis Platform with Multi-Agent LLM Integration
 
-A multi-tenant security analysis platform with SARIF support, built on Django with comprehensive architecture decision records (ADRs).
+**⚠️ IMPORTANT:** This project is currently being refactored to match original requirements. See [GAP_ANALYSIS.md](./GAP_ANALYSIS.md) for details.
 
-## Features
+A proof-of-concept research platform demonstrating LLM-enhanced static analysis with empirical comparison of three agent patterns. Built with Django, Temporal workflows, and Langroid multi-agent system.
 
-- **Multi-Tenancy**: Organization-based isolation with PostgreSQL Row-Level Security (RLS)
-- **Security Scanning**: Automated security scans with Docker-isolated workers
-- **Finding Deduplication**: Intelligent fingerprint-based deduplication
-- **SARIF Support**: Full SARIF file support with hybrid storage (DB + S3)
-- **Real-Time Updates**: Server-Sent Events (SSE) for live scan updates
-- **GitHub Integration**: OAuth authentication and GitHub App integration
-- **JWT Authentication**: Stateless authentication with refresh tokens
-- **API Keys**: Programmatic access via API keys
-- **Rate Limiting**: Redis-based rate limiting and quota management
-- **Comprehensive API**: RESTful API with OpenAPI documentation
+## Project Status
 
-## Architecture
+**Current State:** ~10% implementation (infrastructure only)
+**Target:** Fully functional POC with LLM agent patterns
+**See:** [IMPLEMENTATION_ROADMAP.md](./IMPLEMENTATION_ROADMAP.md) for detailed plan
 
-This platform is built following comprehensive Architecture Decision Records (ADRs). See [docs/architecture/](./docs/architecture/) for detailed documentation.
+## Core Features (Target)
 
-### Core Technologies
+- **Static Analysis Pipeline**: Scan Python code with Semgrep, Bandit, and Ruff
+- **LLM Adjudication**: Use Claude, GPT, and Gemini to filter false positives
+- **Three Agent Patterns**: Compare post-processing, interactive, and multi-agent approaches
+- **Temporal Workflows**: Durable execution with DAG visualization
+- **Semantic Deduplication**: 40-60% finding reduction using Qdrant vector search
+- **Interactive Chat**: Query codebase with context-aware LLM agents
+- **Performance Metrics**: Empirical comparison of cost, accuracy, and token efficiency
 
-- **Backend**: Django 5.0, Django REST Framework
-- **Database**: PostgreSQL 15+ with JSONB and Row-Level Security
-- **Cache/Pub-Sub**: Redis 7
-- **Object Storage**: AWS S3 / MinIO
-- **Task Queue**: Celery
-- **Container Runtime**: Docker
-- **Authentication**: JWT (Simple JWT), GitHub OAuth
+## Architecture (Target)
+
+This is a **research POC**, not a production security platform. See [REQUIREMENTS.md](./REQUIREMENTS.md) for complete specification.
+
+### Technology Stack
+
+- **Backend**: Django 5.0, Django Channels
+- **Workflow Orchestration**: Temporal (NOT Celery - see [GAP_ANALYSIS.md](./GAP_ANALYSIS.md#2-critical-error-workflow-orchestration))
+- **LLM Framework**: Langroid multi-agent system
+- **Databases**: PostgreSQL 15+, Qdrant (vector database)
+- **Static Analysis**: Semgrep, Bandit, Ruff (Dockerized)
+- **Performance Components**: Rust (tree-sitter parser, embedding pipeline)
+- **Frontend**: React + TypeScript (Monaco Editor, ReactFlow for DAG viz)
 
 ## Quick Start
 
 ### Prerequisites
 
-**Option 1: Modern Development (Recommended)**
+**Supported Platforms:**
+- **Arch Linux** (Manjaro, EndeavourOS, etc.)
+- **Ubuntu 22.04+** (Debian-based distros)
+
+**Required:**
 - [Pixi](https://prefix.dev/docs/pixi/overview) package manager
 - Docker 24.0+ with Docker Compose V2
 - Git 2.30+
+- 16GB RAM (for LLM calls + Temporal + Qdrant)
+- **API Keys** for Anthropic (Claude) and OpenAI (GPT)
 
-**Option 2: Traditional Development**
-- Python 3.11+
-- PostgreSQL 15+
-- Redis 7+
-- Docker and Docker Compose
+> 💡 **New to Pixi?** See [DEVELOPMENT.md](./DEVELOPMENT.md) for comprehensive Ubuntu/Arch setup guide.
 
-> 💡 **New to Pixi?** See our comprehensive [DEVELOPMENT.md](./DEVELOPMENT.md) guide for Ubuntu/Arch setup instructions.
+### Installation
 
-### Quick Start with Pixi (Recommended)
-
+**Arch/Manjaro:**
 ```bash
-# Install Pixi (Ubuntu/Debian)
+# Install system dependencies
+sudo pacman -S docker docker-compose git base-devel
+
+# Install Pixi
+yay -S pixi
+
+# Start Docker
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+**Ubuntu 22.04+:**
+```bash
+# Install system dependencies
+sudo apt update
+sudo apt install -y docker.io docker-compose-plugin git build-essential libpq-dev
+
+# Install Pixi
 curl -fsSL https://pixi.sh/install.sh | bash
 export PATH="$HOME/.pixi/bin:$PATH"
 
-# Install Pixi (Arch Linux)
-yay -S pixi
-
-# Clone and setup
-git clone <repository-url>
-cd review-pro
-pixi install
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your settings
-
-# Start infrastructure and run migrations
-pixi run docker-up
-pixi run migrate
-pixi run createsuperuser
-
-# Start development server
-pixi run runserver
+# Start Docker
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+newgrp docker
 ```
 
-**Available Pixi commands:**
+### Project Setup
+
+```bash
+# 1. Clone repository
+git clone <repository-url>
+cd review-pro
+
+# 2. Install dependencies with Pixi
+pixi install
+
+# 3. Configure environment (CRITICAL: Add your API keys!)
+cp .env.example .env
+nano .env  # Add ANTHROPIC_API_KEY and OPENAI_API_KEY
+
+# 4. Start infrastructure (Postgres, Redis, Temporal, Qdrant)
+docker compose up -d postgres redis temporal qdrant
+
+# 5. Wait for Temporal to initialize (30 seconds)
+docker compose logs -f temporal  # Look for "Started Temporal server"
+
+# 6. Run database migrations
+pixi run migrate
+
+# 7. Load default system prompts for LLM agents
+pixi run django python manage.py load_system_prompts
+
+# 8. Start Temporal worker (separate terminal)
+pixi run temporal-worker
+
+# 9. Start Django backend (separate terminal)
+pixi run runserver
+
+# 10. Verify setup
+open http://localhost:8000       # Django API
+open http://localhost:8233       # Temporal UI (workflow visualization)
+open http://localhost:6333/dashboard  # Qdrant dashboard
+```
+
+### Run Test Scan
+
+```bash
+# Test the complete pipeline (SA tools → LLM adjudication)
+pixi run django python manage.py test_scan \
+    --file examples/vulnerable_code.py \
+    --patterns post_processing
+
+# Watch workflow execution in Temporal UI
+open http://localhost:8233
+```
+
+**Available Pixi Commands:**
 - `pixi run runserver` - Start Django dev server
+- `pixi run temporal-worker` - Start Temporal worker
+- `pixi run migrate` - Run database migrations
 - `pixi run test` - Run tests
 - `pixi run format` - Format code (Black + isort)
 - `pixi run lint` - Lint code (flake8 + mypy)
-- `pixi run celery-worker` - Start Celery worker
 - `pixi task list` - See all available tasks
 
 ### Development Setup (Docker Compose)
