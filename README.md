@@ -33,12 +33,56 @@ This platform is built following comprehensive Architecture Decision Records (AD
 
 ### Prerequisites
 
-- Docker and Docker Compose
+**Option 1: Modern Development (Recommended)**
+- [Pixi](https://prefix.dev/docs/pixi/overview) package manager
+- Docker 24.0+ with Docker Compose V2
+- Git 2.30+
+
+**Option 2: Traditional Development**
 - Python 3.11+
 - PostgreSQL 15+
 - Redis 7+
+- Docker and Docker Compose
 
-### Development Setup
+> 💡 **New to Pixi?** See our comprehensive [DEVELOPMENT.md](./DEVELOPMENT.md) guide for Ubuntu/Arch setup instructions.
+
+### Quick Start with Pixi (Recommended)
+
+```bash
+# Install Pixi (Ubuntu/Debian)
+curl -fsSL https://pixi.sh/install.sh | bash
+export PATH="$HOME/.pixi/bin:$PATH"
+
+# Install Pixi (Arch Linux)
+yay -S pixi
+
+# Clone and setup
+git clone <repository-url>
+cd review-pro
+pixi install
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your settings
+
+# Start infrastructure and run migrations
+pixi run docker-up
+pixi run migrate
+pixi run createsuperuser
+
+# Start development server
+pixi run runserver
+```
+
+**Available Pixi commands:**
+- `pixi run runserver` - Start Django dev server
+- `pixi run test` - Run tests
+- `pixi run format` - Format code (Black + isort)
+- `pixi run lint` - Lint code (flake8 + mypy)
+- `pixi run celery-worker` - Start Celery worker
+- `pixi task list` - See all available tasks
+
+### Development Setup (Docker Compose)
 
 1. **Clone the repository**
    ```bash
@@ -54,17 +98,17 @@ This platform is built following comprehensive Architecture Decision Records (AD
 
 3. **Start services with Docker Compose**
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
 4. **Run migrations**
    ```bash
-   docker-compose exec web python manage.py migrate
+   docker compose exec web python manage.py migrate
    ```
 
 5. **Create a superuser**
    ```bash
-   docker-compose exec web python manage.py createsuperuser
+   docker compose exec web python manage.py createsuperuser
    ```
 
 6. **Access the application**
@@ -73,7 +117,11 @@ This platform is built following comprehensive Architecture Decision Records (AD
    - API Docs: http://localhost:8000/api/docs/
    - MinIO Console: http://localhost:9001
 
-### Local Development (without Docker)
+### Local Development (Manual Setup)
+
+> 💡 **Prefer Pixi?** Use the Quick Start section above or see [DEVELOPMENT.md](./DEVELOPMENT.md) for the modern approach.
+
+**Traditional setup with pip:**
 
 1. **Create virtual environment**
    ```bash
@@ -92,22 +140,28 @@ This platform is built following comprehensive Architecture Decision Records (AD
    createdb secanalysis
    ```
 
-4. **Run migrations**
+4. **Configure environment**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
+
+5. **Run migrations**
    ```bash
    python manage.py migrate
    ```
 
-5. **Create superuser**
+6. **Create superuser**
    ```bash
    python manage.py createsuperuser
    ```
 
-6. **Run development server**
+7. **Run development server**
    ```bash
    python manage.py runserver
    ```
 
-7. **Run Celery worker (in another terminal)**
+8. **Run Celery worker (in another terminal)**
    ```bash
    celery -A config worker -l info
    ```
@@ -186,23 +240,55 @@ See `.env.example` for all available configuration options. Key variables:
 
 ## Testing
 
-Run tests with pytest:
+**With Pixi:**
+```bash
+# Run all tests
+pixi run test
 
+# With coverage report (HTML + terminal)
+pixi run test-cov
+
+# Verbose output
+pixi run test-verbose
+
+# Run last failed tests only
+pixi run test-failed
+
+# Run specific test file
+pytest backend/apps/organizations/tests/test_models.py
+```
+
+**Manual:**
 ```bash
 # All tests
-pytest
+pytest backend/
 
 # With coverage
-pytest --cov=apps --cov-report=html
+pytest backend/ --cov=apps --cov-report=html
 
 # Specific app
-pytest apps/organizations/tests/
+pytest backend/apps/organizations/tests/
 ```
 
 ## Development
 
+> 📖 **Comprehensive Guide**: See [DEVELOPMENT.md](./DEVELOPMENT.md) for detailed setup instructions for Ubuntu and Arch Linux.
+
 ### Code Quality
 
+**With Pixi (recommended):**
+```bash
+# Format code (Black + isort)
+pixi run format
+
+# Lint code (flake8 + mypy)
+pixi run lint
+
+# Run all checks (format + lint + test)
+pixi run check
+```
+
+**Manual:**
 ```bash
 # Format code
 black .
@@ -219,6 +305,19 @@ mypy .
 
 ### Database Migrations
 
+**With Pixi:**
+```bash
+# Create migrations
+pixi run makemigrations
+
+# Apply migrations
+pixi run migrate
+
+# Show migration status
+pixi run showmigrations
+```
+
+**Manual:**
 ```bash
 # Create migrations
 python manage.py makemigrations
@@ -232,15 +331,28 @@ python manage.py showmigrations
 
 ### Celery Tasks
 
+**With Pixi:**
 ```bash
 # Start worker
-celery -A config worker -l info
+pixi run celery-worker
 
 # Start beat (scheduled tasks)
-celery -A config beat -l info
+pixi run celery-beat
 
 # Both worker and beat
-celery -A config worker --beat -l info
+pixi run celery-all
+```
+
+**Manual:**
+```bash
+# Start worker
+celery -A config worker -l info --workdir=backend
+
+# Start beat (scheduled tasks)
+celery -A config beat -l info --workdir=backend
+
+# Both worker and beat
+celery -A config worker --beat -l info --workdir=backend
 ```
 
 ## Architecture Decision Records

@@ -1,4 +1,5 @@
-version: '3.8'
+# Modern Docker Compose configuration (no version field needed)
+# Use: docker compose up -d (not docker-compose)
 
 services:
   # PostgreSQL Database

@@ -38,6 +38,10 @@ ENV/
 env.bak/
 venv.bak/
 
+# Pixi
+.pixi/
+# pixi.lock - DO NOT IGNORE (should be committed for reproducibility)
+
 # IDE
 .vscode/
 .idea/

@@ -1,0 +1,231 @@
+[project]
+name = "review-pro"
+version = "0.1.0"
+description = "Multi-tenant security analysis platform with SARIF support"
+authors = ["Review Pro Team"]
+requires-python = ">=3.11,<3.13"
+readme = "README.md"
+license = {text = "MIT"}
+
+[tool.pixi.project]
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[tool.pixi.pypi-dependencies]
+# Core Django
+Django = "==5.0.1"
+djangorestframework = "==3.14.0"
+django-cors-headers = "==4.3.1"
+django-environ = "==0.11.2"
+
+# Database
+psycopg2-binary = "==2.9.9"
+django-postgres-extra = "==2.0.8"
+
+# Authentication & Authorization
+djangorestframework-simplejwt = "==5.3.1"
+PyJWT = "==2.8.0"
+social-auth-app-django = "==5.4.0"
+social-auth-core = "==4.5.1"
+
+# Caching & Pub/Sub
+redis = "==5.0.1"
+django-redis = "==5.4.0"
+hiredis = "==2.3.2"
+
+# Object Storage (S3/MinIO)
+boto3 = "==1.34.22"
+django-storages = "==1.14.2"
+
+# Task Queue
+celery = {version = "==5.3.6", extras = ["redis"]}
+
+# API Documentation
+drf-spectacular = "==0.27.0"
+
+# Security & Rate Limiting
+django-ratelimit = "==4.1.0"
+django-axes = "==6.1.1"
+
+# Monitoring & Logging
+sentry-sdk = "==1.39.2"
+python-json-logger = "==2.0.7"
+
+# SARIF Processing
+sarif-om = "==1.0.4"
+
+# GitHub Integration
+PyGithub = "==2.1.1"
+cryptography = "==42.0.0"
+
+# Utilities
+python-dateutil = "==2.8.2"
+pytz = "==2024.1"
+requests = "==2.31.0"
+urllib3 = "==2.1.0"
+
+# Development & Testing
+pytest = "==7.4.4"
+pytest-django = "==4.7.0"
+pytest-cov = "==4.1.0"
+pytest-mock = "==3.12.0"
+factory-boy = "==3.3.0"
+faker = "==22.0.0"
+black = "==24.1.1"
+flake8 = "==7.0.0"
+isort = "==5.13.2"
+mypy = "==1.8.0"
+django-stubs = "==4.2.7"
+djangorestframework-stubs = "==3.14.5"
+
+# WSGI Server
+gunicorn = "==21.2.0"
+uvicorn = "==0.27.0"
+
+[tool.pixi.dependencies]
+python = "3.11.*"
+pip = ">=24.0"
+
+# System dependencies for Ubuntu/Arch compatibility
+postgresql = ">=15"
+redis = ">=7"
+
+[tool.pixi.tasks]
+# Database tasks
+migrate = "python backend/manage.py migrate"
+makemigrations = "python backend/manage.py makemigrations"
+showmigrations = "python backend/manage.py showmigrations"
+
+# Django server
+runserver = "python backend/manage.py runserver"
+shell = "python backend/manage.py shell"
+createsuperuser = "python backend/manage.py createsuperuser"
+
+# Celery tasks
+celery-worker = "celery -A config worker -l info --workdir=backend"
+celery-beat = "celery -A config beat -l info --workdir=backend"
+celery-all = "celery -A config worker --beat -l info --workdir=backend"
+
+# Testing
+test = "pytest backend/"
+test-cov = "pytest backend/ --cov=backend/apps --cov-report=html --cov-report=term"
+test-verbose = "pytest backend/ -v"
+test-failed = "pytest backend/ --lf"  # Run last failed tests
+
+# Code quality
+format = {depends_on = ["format-black", "format-isort"]}
+format-black = "black backend/"
+format-isort = "isort backend/"
+lint = {depends_on = ["lint-flake8", "lint-mypy"]}
+lint-flake8 = "flake8 backend/"
+lint-mypy = "mypy backend/"
+check = {depends_on = ["format", "lint", "test"]}
+
+# Docker tasks
+docker-up = "docker compose up -d"
+docker-down = "docker compose down"
+docker-logs = "docker compose logs -f"
+docker-ps = "docker compose ps"
+
+# Production tasks
+collectstatic = "python backend/manage.py collectstatic --noinput"
+gunicorn = "gunicorn --bind 0.0.0.0:8000 --workers 4 --timeout 120 --chdir backend config.wsgi:application"
+
+# Setup tasks
+setup = {depends_on = ["setup-env", "setup-db"]}
+setup-env = "cp .env.example .env"
+setup-db = {depends_on = ["migrate", "createsuperuser"]}
+
+# Clean tasks
+clean = {depends_on = ["clean-pyc", "clean-test"]}
+clean-pyc = "find . -type f -name '*.pyc' -delete && find . -type d -name '__pycache__' -delete"
+clean-test = "rm -rf .pytest_cache htmlcov .coverage"
+
+[tool.pixi.feature.dev.dependencies]
+# Additional dev tools
+ipython = "*"
+django-debug-toolbar = "*"
+django-extensions = "*"
+
+[tool.pixi.feature.dev.tasks]
+shell-plus = "python backend/manage.py shell_plus"
+notebook = "python backend/manage.py shell_plus --notebook"
+
+[tool.pixi.environments]
+default = {solve-group = "default"}
+dev = {features = ["dev"], solve-group = "default"}
+
+# Black configuration
+[tool.black]
+line-length = 100
+target-version = ['py311']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | \.pixi
+  | _build
+  | build
+  | dist
+  | migrations
+)/
+'''
+
+# isort configuration
+[tool.isort]
+profile = "black"
+line_length = 100
+skip_glob = ["*/migrations/*", ".pixi/*", ".venv/*"]
+known_django = ["django"]
+known_first_party = ["apps", "config"]
+sections = ["FUTURE", "STDLIB", "DJANGO", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+
+# pytest configuration
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --strict-markers --tb=short"
+testpaths = ["backend"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+
+# mypy configuration
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
+
+[[tool.mypy.overrides]]
+module = "*.migrations.*"
+ignore_errors = true
+
+[tool.django-stubs]
+django_settings_module = "config.settings"
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["backend/apps"]
+omit = [
+    "*/migrations/*",
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/test_*.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
