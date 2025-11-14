@@ -36,6 +36,10 @@ google-generativeai==0.3.2
 # Vector Database Client
 qdrant-client==1.7.0
 
+# Machine Learning & Clustering
+numpy==1.26.3
+scikit-learn==1.4.0
+
 # API Documentation
 drf-spectacular==0.27.0
 

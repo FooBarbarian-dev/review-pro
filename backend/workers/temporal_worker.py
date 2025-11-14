@@ -48,6 +48,11 @@ from workflows.pattern_comparison_workflow import (
     compare_finding_with_patterns,
     calculate_pattern_metrics,
 )
+from workflows.clustering_workflow import (
+    ClusterFindingsWorkflow,
+    generate_embeddings_for_findings,
+    cluster_scan_findings,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +81,7 @@ async def main():
             AdjudicateFindingsWorkflow,
             AdjudicateSingleFindingWorkflow,
             CompareAgentPatternsWorkflow,
+            ClusterFindingsWorkflow,
         ],
         activities=[
             say_hello,
@@ -91,6 +97,8 @@ async def main():
             calculate_adjudication_metrics,
             compare_finding_with_patterns,
             calculate_pattern_metrics,
+            generate_embeddings_for_findings,
+            cluster_scan_findings,
         ],
     )
 

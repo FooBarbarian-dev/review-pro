@@ -289,3 +289,131 @@ class LLMVerdict(models.Model):
     def should_filter(self):
         """Check if finding should be filtered based on verdict."""
         return self.verdict == 'false_positive' and self.confidence >= 0.7
+
+
+class FindingCluster(models.Model):
+    """
+    Cluster of semantically similar findings.
+
+    Groups findings with similar embeddings for better deduplication
+    and analysis. Uses vector embeddings and clustering algorithms.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name='finding_clusters',
+        db_index=True
+    )
+
+    # Cluster identification
+    cluster_label = models.CharField(
+        max_length=100,
+        db_index=True,
+        help_text="Cluster identifier (e.g., cluster_0, cluster_1)"
+    )
+
+    # Representative finding (closest to centroid)
+    representative_finding = models.ForeignKey(
+        Finding,
+        on_delete=models.CASCADE,
+        related_name='representative_clusters',
+        null=True,
+        blank=True,
+        help_text="Most representative finding in cluster"
+    )
+
+    # Cluster statistics
+    size = models.IntegerField(default=0, help_text="Number of findings in cluster")
+    avg_similarity = models.FloatField(
+        default=0.0,
+        help_text="Average pairwise similarity (0.0-1.0)"
+    )
+    cohesion_score = models.FloatField(
+        default=0.0,
+        help_text="Cluster cohesion score (higher is better)"
+    )
+
+    # Clustering metadata
+    algorithm = models.CharField(
+        max_length=50,
+        default='dbscan',
+        help_text="Clustering algorithm used"
+    )
+    similarity_threshold = models.FloatField(
+        default=0.85,
+        help_text="Similarity threshold used for clustering"
+    )
+
+    # Cluster characteristics (from representative finding)
+    primary_rule_id = models.CharField(max_length=255, blank=True)
+    primary_severity = models.CharField(max_length=20, blank=True)
+    primary_tool = models.CharField(max_length=255, blank=True)
+
+    # Additional metadata
+    statistics = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Detailed cluster statistics"
+    )
+
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'finding_clusters'
+        verbose_name = _('finding cluster')
+        verbose_name_plural = _('finding clusters')
+        ordering = ['-size', '-created_at']
+        indexes = [
+            models.Index(fields=['organization', 'cluster_label']),
+            models.Index(fields=['size']),
+            models.Index(fields=['created_at']),
+        ]
+        unique_together = [['organization', 'cluster_label']]
+
+    def __str__(self):
+        return f"{self.cluster_label} ({self.size} findings)"
+
+
+class FindingClusterMembership(models.Model):
+    """
+    Membership relationship between findings and clusters.
+
+    Links findings to their semantic clusters.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    finding = models.ForeignKey(
+        Finding,
+        on_delete=models.CASCADE,
+        related_name='cluster_memberships'
+    )
+    cluster = models.ForeignKey(
+        FindingCluster,
+        on_delete=models.CASCADE,
+        related_name='members'
+    )
+
+    # Similarity to cluster centroid
+    distance_to_centroid = models.FloatField(
+        default=0.0,
+        help_text="Distance from cluster centroid (lower is better)"
+    )
+
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'finding_cluster_memberships'
+        verbose_name = _('finding cluster membership')
+        verbose_name_plural = _('finding cluster memberships')
+        unique_together = [['finding', 'cluster']]
+        indexes = [
+            models.Index(fields=['cluster', 'distance_to_centroid']),
+        ]
+
+    def __str__(self):
+        return f"{self.finding.rule_id} in {self.cluster.cluster_label}"
