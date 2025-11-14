@@ -116,14 +116,35 @@ class Finding(models.Model):
     def __str__(self):
         return f"{self.rule_id} in {self.file_path}:{self.start_line}"
 
+    def save(self, *args, **kwargs):
+        """
+        Auto-generate fingerprint if not provided (ADR-002).
+        """
+        if not self.fingerprint:
+            from apps.findings.utils import generate_finding_fingerprint
+            self.fingerprint = generate_finding_fingerprint(
+                rule_id=self.rule_id,
+                file_path=self.file_path,
+                start_line=self.start_line,
+                column=self.start_column,
+                message=self.message
+            )
+        super().save(*args, **kwargs)
+
     @staticmethod
-    def generate_fingerprint(organization_id, rule_id, file_path, start_line, start_column, message):
+    def generate_fingerprint(rule_id, file_path, start_line, start_column, message):
         """
         Generate a deterministic fingerprint for deduplication (ADR-002).
+        Uses the utility function for consistency.
         """
-        message_hash = hashlib.sha256(message.encode()).hexdigest()[:16]
-        fingerprint_data = f"{organization_id}|{rule_id}|{file_path}|{start_line}|{start_column}|{message_hash}"
-        return hashlib.sha256(fingerprint_data.encode()).hexdigest()
+        from apps.findings.utils import generate_finding_fingerprint
+        return generate_finding_fingerprint(
+            rule_id=rule_id,
+            file_path=file_path,
+            start_line=start_line,
+            column=start_column,
+            message=message
+        )
 
     def update_occurrence(self, scan):
         """
