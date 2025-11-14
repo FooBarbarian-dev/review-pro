@@ -78,3 +78,29 @@ class QuotaUsageSerializer(serializers.ModelSerializer):
             'is_scan_quota_exceeded', 'is_storage_quota_exceeded', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class TriggerAdjudicationSerializer(serializers.Serializer):
+    """Serializer for triggering LLM adjudication."""
+
+    provider = serializers.ChoiceField(
+        choices=['openai', 'anthropic', 'google'],
+        default='openai'
+    )
+    model = serializers.CharField(max_length=100, default='gpt-4o')
+    pattern = serializers.ChoiceField(
+        choices=['post_processing', 'interactive', 'multi_agent'],
+        default='post_processing'
+    )
+    batch_size = serializers.IntegerField(default=10, min_value=1, max_value=100)
+    max_findings = serializers.IntegerField(default=100, min_value=1, max_value=1000)
+
+
+class TriggerClusteringSerializer(serializers.Serializer):
+    """Serializer for triggering clustering."""
+
+    algorithm = serializers.ChoiceField(
+        choices=['dbscan', 'agglomerative'],
+        default='dbscan'
+    )
+    threshold = serializers.FloatField(default=0.85, min_value=0.0, max_value=1.0)
