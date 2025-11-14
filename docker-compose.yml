@@ -89,47 +89,21 @@ services:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
 
-  # Celery Worker
-  celery_worker:
+  # React Frontend
+  frontend:
     build:
-      context: ./backend
+      context: ./frontend
       dockerfile: Dockerfile
-    container_name: secanalysis_celery_worker
-    command: celery -A config worker -l info
-    env_file:
-      - .env
+    container_name: secanalysis_frontend
+    ports:
+      - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/secanalysis
-      - REDIS_URL=redis://redis:6379/0
-      - USE_S3=true
-      - AWS_ACCESS_KEY_ID=minioadmin
-      - AWS_SECRET_ACCESS_KEY=minioadmin
-      - AWS_STORAGE_BUCKET_NAME=sarif-files
-      - AWS_S3_ENDPOINT_URL=http://minio:9000
+      - VITE_API_URL=http://localhost:8000
     depends_on:
-      - db
-      - redis
+      - web
     volumes:
-      - ./backend:/app
-      - /var/run/docker.sock:/var/run/docker.sock  # For Docker-in-Docker scans
-
-  # Celery Beat (Scheduled Tasks)
-  celery_beat:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: secanalysis_celery_beat
-    command: celery -A config beat -l info
-    env_file:
-      - .env
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/secanalysis
-      - REDIS_URL=redis://redis:6379/0
-    depends_on:
-      - db
-      - redis
-    volumes:
-      - ./backend:/app
+      - ./frontend:/app
+      - /app/node_modules  # Prevent overwriting node_modules
 
   # Temporal Server (Workflow Orchestration - replaces Celery)
   temporal:
