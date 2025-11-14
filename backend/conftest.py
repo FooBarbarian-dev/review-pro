@@ -4,7 +4,7 @@ Pytest configuration and shared fixtures.
 import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
-from apps.organizations.models import Organization, OrganizationMembership
+from apps.organizations.models import Organization, OrganizationMembership, Repository, Branch
 
 User = get_user_model()
 
@@ -69,3 +69,25 @@ def admin_client(api_client, admin_user):
     """Return an authenticated admin API client."""
     api_client.force_authenticate(user=admin_user)
     return api_client
+
+
+@pytest.fixture
+def repository(organization):
+    """Create and return a test repository."""
+    return Repository.objects.create(
+        organization=organization,
+        name='test-repo',
+        full_name='test-org/test-repo',
+        github_repo_id='123456',
+        clone_url='https://github.com/test-org/test-repo.git'
+    )
+
+
+@pytest.fixture
+def branch(repository):
+    """Create and return a test branch."""
+    return Branch.objects.create(
+        repository=repository,
+        name='main',
+        sha='abc123def456'
+    )
