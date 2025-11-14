@@ -43,6 +43,11 @@ from workflows.adjudication_workflow import (
     get_scan_findings,
     calculate_adjudication_metrics,
 )
+from workflows.pattern_comparison_workflow import (
+    CompareAgentPatternsWorkflow,
+    compare_finding_with_patterns,
+    calculate_pattern_metrics,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +75,7 @@ async def main():
             ScanRepositoryWorkflow,
             AdjudicateFindingsWorkflow,
             AdjudicateSingleFindingWorkflow,
+            CompareAgentPatternsWorkflow,
         ],
         activities=[
             say_hello,
@@ -83,6 +89,8 @@ async def main():
             adjudicate_finding,
             get_scan_findings,
             calculate_adjudication_metrics,
+            compare_finding_with_patterns,
+            calculate_pattern_metrics,
         ],
     )
 
