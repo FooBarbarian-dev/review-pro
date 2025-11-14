@@ -23,6 +23,7 @@ from temporalio.client import Client
 from apps.organizations.models import Organization, Repository, Branch
 from apps.scans.models import Scan
 from workflows.scan_workflow import ScanRepositoryWorkflow
+from workflows.adjudication_workflow import AdjudicateFindingsWorkflow
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,24 @@ class Command(BaseCommand):
             type=str,
             default='test-repo',
             help='Repository name (default: test-repo)',
+        )
+        parser.add_argument(
+            '--adjudicate',
+            action='store_true',
+            help='Run LLM adjudication after scanning',
+        )
+        parser.add_argument(
+            '--llm-provider',
+            type=str,
+            default='openai',
+            choices=['openai', 'anthropic'],
+            help='LLM provider for adjudication (default: openai)',
+        )
+        parser.add_argument(
+            '--llm-model',
+            type=str,
+            default='gpt-4o',
+            help='LLM model for adjudication (default: gpt-4o)',
         )
 
     def handle(self, *args, **options):
@@ -119,10 +138,41 @@ class Command(BaseCommand):
                 self.stdout.write(f'  Updated findings: {stats.get("updated", 0)}')
                 self.stdout.write(f'  Errors: {stats.get("errors", 0)}')
 
+                # Run adjudication if requested
+                if options.get('adjudicate'):
+                    self.stdout.write(f'\n{self.style.WARNING("Running LLM adjudication...")}')
+                    adjudication_result = asyncio.run(
+                        self.run_adjudication_workflow(
+                            scan_id=str(scan.id),
+                            provider=options.get('llm_provider'),
+                            model=options.get('llm_model'),
+                        )
+                    )
+
+                    if adjudication_result.get('success'):
+                        metrics = adjudication_result.get('metrics', {})
+                        self.stdout.write(self.style.SUCCESS('\n✓ Adjudication completed!'))
+                        self.stdout.write(f'\nAdjudication Results:')
+                        self.stdout.write(f'  Total processed: {adjudication_result.get("total_processed", 0)}')
+                        self.stdout.write(f'  True positives: {metrics.get("true_positives", 0)}')
+                        self.stdout.write(f'  False positives: {metrics.get("false_positives", 0)}')
+                        self.stdout.write(f'  Uncertain: {metrics.get("uncertain", 0)}')
+                        self.stdout.write(f'  Filtered (high-conf FP): {metrics.get("filtered_count", 0)}')
+                        self.stdout.write(f'  FP reduction rate: {metrics.get("fp_reduction_rate", 0):.1f}%')
+                        self.stdout.write(f'  Total cost: ${adjudication_result.get("total_cost_usd", 0):.4f}')
+                        self.stdout.write(f'  Avg time: {metrics.get("avg_processing_time_ms", 0)}ms')
+                    else:
+                        self.stdout.write(
+                            self.style.ERROR(f'\n✗ Adjudication failed: {adjudication_result.get("error")}')
+                        )
+
                 self.stdout.write(f'\nView in Temporal UI:')
                 self.stdout.write(f'  http://localhost:8233')
                 self.stdout.write(f'\nView findings in Django admin:')
                 self.stdout.write(f'  http://localhost:8000/admin/findings/finding/')
+                if options.get('adjudicate'):
+                    self.stdout.write(f'View verdicts:')
+                    self.stdout.write(f'  http://localhost:8000/admin/findings/llmverdict/')
             else:
                 self.stdout.write(
                     self.style.ERROR(f'\n✗ Scan failed: {result.get("error")}')
@@ -228,6 +278,40 @@ class Command(BaseCommand):
             ScanRepositoryWorkflow.run,
             args=[scan_id, repo_url, local_path],
             id=f'scan-{scan_id}',
+            task_queue='code-analysis',
+        )
+
+        return result
+
+    async def run_adjudication_workflow(
+        self,
+        scan_id: str,
+        provider: str = "openai",
+        model: str = "gpt-4o",
+    ) -> dict:
+        """
+        Execute the adjudication workflow via Temporal.
+
+        Args:
+            scan_id: UUID of the scan
+            provider: LLM provider
+            model: LLM model
+
+        Returns:
+            Workflow result dictionary
+        """
+        self.stdout.write(f'  Provider: {provider}')
+        self.stdout.write(f'  Model: {model}')
+        self.stdout.write('  (This may take several minutes depending on finding count)\n')
+
+        # Connect to Temporal server (reuse connection)
+        client = await Client.connect('localhost:7233')
+
+        # Execute workflow
+        result = await client.execute_workflow(
+            AdjudicateFindingsWorkflow.run,
+            args=[scan_id, provider, model],
+            id=f'adjudicate-{scan_id}',
             task_queue='code-analysis',
         )
 

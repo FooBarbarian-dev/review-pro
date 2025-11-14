@@ -36,6 +36,13 @@ from workflows.scan_workflow import (
     parse_and_store_findings,
     cleanup_scan_directory,
 )
+from workflows.adjudication_workflow import (
+    AdjudicateFindingsWorkflow,
+    AdjudicateSingleFindingWorkflow,
+    adjudicate_finding,
+    get_scan_findings,
+    calculate_adjudication_metrics,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +68,8 @@ async def main():
             SayHello,
             TestLLMWorkflow,
             ScanRepositoryWorkflow,
+            AdjudicateFindingsWorkflow,
+            AdjudicateSingleFindingWorkflow,
         ],
         activities=[
             say_hello,
@@ -71,6 +80,9 @@ async def main():
             run_ruff_scan,
             parse_and_store_findings,
             cleanup_scan_directory,
+            adjudicate_finding,
+            get_scan_findings,
+            calculate_adjudication_metrics,
         ],
     )
 
