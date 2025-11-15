@@ -32,6 +32,7 @@ class SARIFParser:
         self.findings_created = 0
         self.findings_updated = 0
         self.errors = []
+        self.scan_id = None  # Set by caller for event publishing
 
     def parse_file(self, sarif_path: str) -> Dict:
         """
@@ -259,6 +260,20 @@ class SARIFParser:
                 )
                 self.findings_created += 1
                 logger.debug(f"Created finding {finding.id}")
+
+                # Publish finding discovered event
+                if self.scan_id:
+                    try:
+                        from apps.scans.events import publish_finding_discovered
+                        publish_finding_discovered(
+                            scan_id=self.scan_id,
+                            finding_id=str(finding.id),
+                            severity=severity,
+                            rule_id=rule_id,
+                            file_path=file_path
+                        )
+                    except Exception as event_error:
+                        logger.warning(f"Failed to publish finding event: {event_error}")
 
             except Exception as e:
                 logger.error(f"Failed to create finding for {rule_id} in {file_path}: {e}")

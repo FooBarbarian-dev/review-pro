@@ -65,11 +65,14 @@ def run_security_scan(scan_id):
     from .github_app import get_github_app
     from .storage import get_storage
     from .sarif_parser import SARIFParser
+    from .events import publish_status_change, publish_progress, publish_log, publish_scan_completed, publish_scan_failed, publish_finding_discovered
     from django.conf import settings
     import docker
     import json
+    import time
 
     scan = None
+    start_time = time.time()
 
     try:
         # Load scan with related objects
@@ -82,8 +85,13 @@ def run_security_scan(scan_id):
         scan.started_at = timezone.now()
         scan.save(update_fields=['status', 'started_at'])
 
+        # Publish status change event
+        publish_status_change(str(scan_id), 'running', 'Scan worker started')
+        publish_progress(str(scan_id), 'initializing', 0, 6, 'Starting scan')
+
         # Step 1: Generate ephemeral GitHub App token
         _log_scan(scan, 'info', 'Generating GitHub App token')
+        publish_progress(str(scan_id), 'authentication', 1, 6, 'Generating GitHub token')
         try:
             github_app = get_github_app()
             token_data = github_app.generate_installation_token(
@@ -95,11 +103,13 @@ def run_security_scan(scan_id):
                 scan, 'info',
                 f"GitHub token generated (expires at {token_data['expires_at']})"
             )
+            publish_log(str(scan_id), 'info', 'GitHub authentication successful')
         except Exception as e:
             raise Exception(f"Failed to generate GitHub token: {e}")
 
         # Step 2: Start Docker container with security tools
         _log_scan(scan, 'info', f"Starting Docker container: {settings.WORKER_DOCKER_IMAGE}")
+        publish_progress(str(scan_id), 'container', 2, 6, 'Starting security scanner')
 
         try:
             docker_client = docker.from_env()
@@ -128,6 +138,7 @@ def run_security_scan(scan_id):
             )
 
             _log_scan(scan, 'info', f'Container started: {container.short_id}')
+            publish_log(str(scan_id), 'info', f'Scanning {scan.repository.full_name}:{scan.branch.name}')
 
         except docker.errors.ImageNotFound:
             raise Exception(f"Docker image not found: {settings.WORKER_DOCKER_IMAGE}")
@@ -136,6 +147,7 @@ def run_security_scan(scan_id):
 
         # Step 3: Wait for container completion with timeout
         _log_scan(scan, 'info', 'Waiting for scan to complete')
+        publish_progress(str(scan_id), 'scanning', 3, 6, 'Running security analysis')
 
         try:
             timeout = getattr(settings, 'WORKER_TIMEOUT', 1800)  # 30 min default
@@ -147,9 +159,11 @@ def run_security_scan(scan_id):
                 logs = container.logs().decode('utf-8', errors='replace')
                 _log_scan(scan, 'error', f'Container exited with code {exit_code}')
                 _log_scan(scan, 'error', f'Container logs:\n{logs[:1000]}')
+                publish_log(str(scan_id), 'error', f'Scanner failed with exit code {exit_code}')
                 raise Exception(f"Scan failed with exit code {exit_code}")
 
             _log_scan(scan, 'info', 'Scan completed successfully')
+            publish_log(str(scan_id), 'success', 'Security analysis completed')
 
         except docker.errors.APIError as e:
             raise Exception(f"Container execution error: {e}")
@@ -186,6 +200,7 @@ def run_security_scan(scan_id):
 
         # Step 5: Upload SARIF to S3
         _log_scan(scan, 'info', 'Uploading SARIF to S3')
+        publish_progress(str(scan_id), 'uploading', 4, 6, 'Storing scan results')
 
         try:
             storage = get_storage()
@@ -201,6 +216,7 @@ def run_security_scan(scan_id):
             scan.save(update_fields=['sarif_file_path', 'sarif_file_size'])
 
             _log_scan(scan, 'info', f'SARIF uploaded to {s3_path}')
+            publish_log(str(scan_id), 'info', f'SARIF file stored ({file_size} bytes)')
 
         except Exception as e:
             # Non-fatal: continue with finding extraction
@@ -208,9 +224,12 @@ def run_security_scan(scan_id):
 
         # Step 6: Parse SARIF and create findings
         _log_scan(scan, 'info', 'Parsing SARIF and extracting findings')
+        publish_progress(str(scan_id), 'parsing', 5, 6, 'Extracting security findings')
 
         try:
             parser = SARIFParser()
+            # Pass scan_id for event publishing
+            parser.scan_id = str(scan_id)
             parser.extract_findings(
                 sarif_data=sarif_data,
                 scan=scan,
@@ -229,11 +248,19 @@ def run_security_scan(scan_id):
                 f"Found {summary['findings_created']} new findings, "
                 f"updated {summary['findings_updated']} existing"
             )
+            publish_log(
+                str(scan_id), 'success',
+                f"Discovered {findings_count} security findings"
+            )
 
             if summary['errors']:
                 _log_scan(
                     scan, 'warning',
                     f"Encountered {len(summary['errors'])} errors during parsing"
+                )
+                publish_log(
+                    str(scan_id), 'warning',
+                    f"Encountered {len(summary['errors'])} parsing errors"
                 )
 
         except Exception as e:
@@ -244,8 +271,13 @@ def run_security_scan(scan_id):
         scan.completed_at = timezone.now()
         scan.save(update_fields=['status', 'completed_at'])
 
+        duration = time.time() - start_time
         _log_scan(scan, 'success', 'Scan completed successfully')
-        logger.info(f"Scan {scan_id} completed: {findings_count} findings")
+        logger.info(f"Scan {scan_id} completed: {findings_count} findings in {duration:.1f}s")
+
+        # Publish completion event
+        publish_progress(str(scan_id), 'completed', 6, 6, 'Scan complete')
+        publish_scan_completed(str(scan_id), findings_count, duration)
 
         # Step 8: Update quota usage
         update_quota_usage.delay(str(scan.organization.id), str(scan.id))
@@ -261,6 +293,9 @@ def run_security_scan(scan_id):
                 scan.completed_at = timezone.now()
                 scan.save(update_fields=['status', 'error_message', 'completed_at'])
                 _log_scan(scan, 'error', f'Scan failed: {error_msg}')
+
+                # Publish failure event
+                publish_scan_failed(str(scan_id), error_msg[:500])
             except:
                 pass
 
