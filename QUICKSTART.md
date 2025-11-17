@@ -55,63 +55,46 @@ brew install pixi
 git clone https://github.com/your-org/review-pro.git
 cd review-pro
 
-# Initialize pixi environment
-pixi init
-
-# Add dependencies
-pixi add python=3.12 nodejs=20 postgresql=18 redis=7
-
-# Create pixi.toml (if not exists)
-cat > pixi.toml <<EOF
-[project]
-name = "review-pro"
-version = "0.1.0"
-channels = ["conda-forge"]
-
-[dependencies]
-python = "3.12.*"
-nodejs = "20.*"
-postgresql = "18.*"
-redis = "7.*"
-
-[tasks]
-setup-backend = "cd backend && pip install -r requirements.txt"
-setup-frontend = "cd frontend && npm install"
-migrate = "cd backend && python manage.py migrate"
-test = "pytest backend/apps"
-start-services = "docker compose up -d db redis temporal qdrant minio"
-dev = "docker compose up"
-EOF
-
-# Install all dependencies
+# Install all dependencies (reads from pyproject.toml)
 pixi install
 
-# Setup backend
-pixi run setup-backend
+# Configure environment
+cp .env.example .env
+# Edit .env with your API keys and settings
 
-# Setup frontend
-pixi run setup-frontend
+# Start infrastructure services
+pixi run docker-up
 
-# Start services
-pixi run start-services
+# Wait for services to be healthy (check with: pixi run docker-ps)
+sleep 10
 
-# Run migrations
+# Run database migrations
 pixi run migrate
 
-# Create sample data
-cd backend && pixi run python manage.py create_sample_data
+# Create sample data (optional)
+pixi shell
+python backend/manage.py create_sample_data
+exit
 ```
 
 #### Run with pixi
 
 ```bash
-# Start all services
-pixi run dev
+# Terminal 1: Start Temporal worker
+pixi run temporal-worker
 
-# Or individually
-pixi shell  # Activate environment
-cd backend && python manage.py runserver &
-cd frontend && npm run dev &
+# Terminal 2: Start Django backend
+pixi run runserver
+
+# Terminal 3: Start frontend (requires npm install first)
+cd frontend
+npm install
+npm run dev
+
+# Access the application:
+# - Frontend: http://localhost:3000
+# - Backend API: http://localhost:8000
+# - Temporal UI: http://localhost:8233
 ```
 
 ---
@@ -402,11 +385,11 @@ npm --version
 #### Python Setup (Ubuntu)
 
 ```bash
-# Install Python 3.12
-sudo apt install python3.12 python3.12-venv python3-pip
+# Install Python 3.11
+sudo apt install python3.11 python3.11-venv python3-pip
 
 # Set as default (optional)
-sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
+sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
 ```
 
 ---

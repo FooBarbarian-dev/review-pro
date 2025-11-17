@@ -19,7 +19,7 @@ This guide covers local development setup for Review Pro using modern tools: **P
 
 ## System Requirements
 
-- **Python**: 3.12+ (managed by Pixi)
+- **Python**: 3.11+ (managed by Pixi)
 - **Docker**: 24.0+ with Docker Compose V2
 - **PostgreSQL**: 18+ (via Docker or system package)
 - **Redis**: 7+ (via Docker or system package)
