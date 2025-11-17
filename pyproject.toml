@@ -2,7 +2,9 @@
 name = "review-pro"
 version = "0.1.0"
 description = "Multi-tenant security analysis platform with SARIF support"
-authors = ["Review Pro Team"]
+authors = [
+    {name = "Review Pro Team"}
+]
 requires-python = ">=3.11,<3.12"
 readme = "README.md"
 license = {text = "MIT"}
