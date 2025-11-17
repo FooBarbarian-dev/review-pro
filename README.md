@@ -48,7 +48,8 @@ This is a **research POC**, not a production security platform. See [REQUIREMENT
 - Django 5.0 + Django REST Framework
 - Temporal workflow orchestration (v1.5.0)
 - Langroid multi-agent framework (v0.1.297)
-- PostgreSQL 15+ (with Row-Level Security)
+- PostgreSQL 18+ (with Row-Level Security)
+- Python 3.12+
 - Qdrant vector database (v1.7.0)
 
 **Frontend:**

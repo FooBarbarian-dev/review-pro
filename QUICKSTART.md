@@ -59,7 +59,7 @@ cd review-pro
 pixi init
 
 # Add dependencies
-pixi add python=3.11 nodejs=20 postgresql=15 redis=7
+pixi add python=3.12 nodejs=20 postgresql=18 redis=7
 
 # Create pixi.toml (if not exists)
 cat > pixi.toml <<EOF
@@ -69,9 +69,9 @@ version = "0.1.0"
 channels = ["conda-forge"]
 
 [dependencies]
-python = "3.11.*"
+python = "3.12.*"
 nodejs = "20.*"
-postgresql = "15.*"
+postgresql = "18.*"
 redis = "7.*"
 
 [tasks]
@@ -402,11 +402,11 @@ npm --version
 #### Python Setup (Ubuntu)
 
 ```bash
-# Install Python 3.11
-sudo apt install python3.11 python3.11-venv python3-pip
+# Install Python 3.12
+sudo apt install python3.12 python3.12-venv python3-pip
 
 # Set as default (optional)
-sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
 ```
 
 ---

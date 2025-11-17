@@ -3,7 +3,7 @@ name = "review-pro"
 version = "0.1.0"
 description = "Multi-tenant security analysis platform with SARIF support"
 authors = ["Review Pro Team"]
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.12,<3.13"
 readme = "README.md"
 license = {text = "MIT"}
 
@@ -93,11 +93,11 @@ gunicorn = "==21.2.0"
 uvicorn = "==0.27.0"
 
 [tool.pixi.dependencies]
-python = "3.11.*"
+python = "3.12.*"
 pip = ">=24.0"
 
 # System dependencies for Ubuntu/Arch compatibility
-postgresql = ">=15"
+postgresql = ">=18"
 redis = ">=7"
 
 [tool.pixi.tasks]
@@ -166,7 +166,7 @@ dev = {features = ["dev"], solve-group = "default"}
 # Black configuration
 [tool.black]
 line-length = 100
-target-version = ['py311']
+target-version = ['py312']
 include = '\.pyi?$'
 exclude = '''
 /(
@@ -205,7 +205,7 @@ markers = [
 
 # mypy configuration
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
