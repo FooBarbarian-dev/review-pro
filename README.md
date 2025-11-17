@@ -31,91 +31,60 @@ This platform is built following comprehensive Architecture Decision Records (AD
 
 ## Quick Start
 
-### Prerequisites
+Choose your preferred development environment:
 
-- Docker and Docker Compose
-- Python 3.11+
-- PostgreSQL 15+
-- Redis 7+
+### Option 1: Native Development (Manjaro + Sway - Recommended)
 
-### Development Setup
+For native development with pixi package manager on Manjaro Linux with Sway:
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd -jl-dx
-   ```
+**See [QUICKSTART.md](./QUICKSTART.md) for detailed instructions.**
 
-2. **Copy environment configuration**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your configuration
-   ```
+Quick setup:
+```bash
+# Install pixi, PostgreSQL, and Redis
+curl -fsSL https://pixi.sh/install.sh | bash
+sudo pacman -S postgresql redis
 
-3. **Start services with Docker Compose**
-   ```bash
-   docker-compose up -d
-   ```
+# Clone and setup
+git clone <repository-url>
+cd review-pro
+pixi install
 
-4. **Run migrations**
-   ```bash
-   docker-compose exec web python manage.py migrate
-   ```
+# Setup database and run
+pixi run migrate
+pixi run createsuperuser
+pixi run runserver
+```
 
-5. **Create a superuser**
-   ```bash
-   docker-compose exec web python manage.py createsuperuser
-   ```
+### Option 2: Docker Development
 
-6. **Access the application**
-   - API: http://localhost:8000
-   - Admin: http://localhost:8000/admin
-   - API Docs: http://localhost:8000/api/docs/
-   - MinIO Console: http://localhost:9001
+For containerized development with Docker Compose:
 
-### Local Development (without Docker)
+**See [DOCKER_GUIDE.md](./DOCKER_GUIDE.md) for detailed instructions.**
 
-1. **Create virtual environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+Quick setup:
+```bash
+# Clone and setup
+git clone <repository-url>
+cd review-pro
+cp .env.example .env
 
-2. **Install dependencies**
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   ```
+# Start services
+docker-compose up -d
+docker-compose exec web python manage.py migrate
+docker-compose exec web python manage.py createsuperuser
+```
 
-3. **Set up local database**
-   ```bash
-   createdb secanalysis
-   ```
-
-4. **Run migrations**
-   ```bash
-   python manage.py migrate
-   ```
-
-5. **Create superuser**
-   ```bash
-   python manage.py createsuperuser
-   ```
-
-6. **Run development server**
-   ```bash
-   python manage.py runserver
-   ```
-
-7. **Run Celery worker (in another terminal)**
-   ```bash
-   celery -A config worker -l info
-   ```
+Access the application:
+- API: http://localhost:8000
+- Admin: http://localhost:8000/admin
+- API Docs: http://localhost:8000/api/docs/
+- MinIO Console: http://localhost:9001
 
 ## Project Structure
 
 ```
--jl-dx/
+review-pro/
 ├── backend/                    # Django backend
 │   ├── apps/                   # Django applications
 │   │   ├── authentication/     # JWT & GitHub OAuth
@@ -186,17 +155,20 @@ See `.env.example` for all available configuration options. Key variables:
 
 ## Testing
 
-Run tests with pytest:
+**See [TESTING_GUIDE.md](./TESTING_GUIDE.md) for comprehensive testing instructions.**
+
+Quick test commands:
 
 ```bash
-# All tests
-pytest
+# Native environment
+pixi run test          # All tests
+pixi run test-unit     # Unit tests only
+pixi run test-cov      # With coverage
 
-# With coverage
-pytest --cov=apps --cov-report=html
-
-# Specific app
-pytest apps/organizations/tests/
+# Docker environment
+docker-compose exec web pytest
+docker-compose exec web pytest -m unit
+docker-compose exec web pytest --cov=apps
 ```
 
 ## Development
@@ -204,43 +176,42 @@ pytest apps/organizations/tests/
 ### Code Quality
 
 ```bash
-# Format code
-black .
+# Native environment
+pixi run format      # Format code (black + isort)
+pixi run lint        # Lint code (flake8)
+pixi run typecheck   # Type checking (mypy)
+pixi run check       # Run all checks + tests
 
-# Sort imports
-isort .
-
-# Lint
-flake8
-
-# Type checking
-mypy .
+# Docker environment
+docker-compose exec web black .
+docker-compose exec web isort .
+docker-compose exec web flake8
+docker-compose exec web mypy .
 ```
 
 ### Database Migrations
 
 ```bash
-# Create migrations
-python manage.py makemigrations
+# Native environment
+pixi run makemigrations
+pixi run migrate
 
-# Apply migrations
-python manage.py migrate
-
-# Show migration status
-python manage.py showmigrations
+# Docker environment
+docker-compose exec web python manage.py makemigrations
+docker-compose exec web python manage.py migrate
 ```
 
 ### Celery Tasks
 
 ```bash
-# Start worker
-celery -A config worker -l info
+# Native environment
+pixi run celery-worker    # Start worker
+pixi run celery-beat      # Start beat scheduler
+pixi run celery-all       # Both worker and beat
 
-# Start beat (scheduled tasks)
-celery -A config beat -l info
-
-# Both worker and beat
-celery -A config worker --beat -l info
+# Docker environment
+docker-compose up celery_worker
+docker-compose up celery_beat
 ```
 
 ## Architecture Decision Records
