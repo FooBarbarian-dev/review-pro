@@ -106,6 +106,7 @@ postgresql = ">=18.0,<19"
 migrate = "python backend/manage.py migrate"
 makemigrations = "python backend/manage.py makemigrations"
 showmigrations = "python backend/manage.py showmigrations"
+setup-migrations = "bash scripts/create_initial_migrations.sh"
 
 # Django server
 runserver = "python backend/manage.py runserver"
