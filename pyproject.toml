@@ -106,7 +106,14 @@ postgresql = ">=18.0,<19"
 migrate = "python backend/manage.py migrate"
 makemigrations = "python backend/manage.py makemigrations"
 showmigrations = "python backend/manage.py showmigrations"
-setup-migrations = "bash scripts/create_initial_migrations.sh"
+
+# Create initial migrations for all apps in dependency order
+makemigrations-users = "python backend/manage.py makemigrations users"
+makemigrations-organizations = "python backend/manage.py makemigrations organizations"
+makemigrations-authentication = "python backend/manage.py makemigrations authentication"
+makemigrations-scans = "python backend/manage.py makemigrations scans"
+makemigrations-findings = "python backend/manage.py makemigrations findings"
+setup-migrations = { depends-on = ["makemigrations-users", "makemigrations-organizations", "makemigrations-authentication", "makemigrations-scans", "makemigrations-findings"] }
 
 # Django server
 runserver = "python backend/manage.py runserver"

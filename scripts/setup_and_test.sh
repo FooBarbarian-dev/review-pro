@@ -17,7 +17,7 @@ echo "========================================="
 echo ""
 echo "Step 1/3: Creating initial migrations..."
 echo "-----------------------------------------"
-if bash scripts/create_initial_migrations.sh; then
+if pixi run setup-migrations; then
     echo -e "${GREEN}✓ Step 1 PASSED: Migrations created successfully${NC}"
 else
     echo -e "${RED}✗ Step 1 FAILED: Migration creation failed${NC}"
@@ -29,7 +29,7 @@ fi
 echo ""
 echo "Step 2/3: Applying migrations..."
 echo "-----------------------------------------"
-if python backend/manage.py migrate; then
+if pixi run migrate; then
     echo -e "${GREEN}✓ Step 2 PASSED: Migrations applied successfully${NC}"
 else
     echo -e "${RED}✗ Step 2 FAILED: Migration application failed${NC}"
@@ -43,7 +43,7 @@ fi
 echo ""
 echo "Step 3/3: Running tests..."
 echo "-----------------------------------------"
-if pytest backend/; then
+if pixi run test; then
     echo -e "${GREEN}✓ Step 3 PASSED: All tests passed${NC}"
 else
     echo -e "${RED}✗ Step 3 FAILED: Tests failed${NC}"
