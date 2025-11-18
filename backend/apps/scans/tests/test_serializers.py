@@ -6,7 +6,7 @@ from apps.scans.api.serializers import (
     ScanListSerializer, ScanDetailSerializer, ScanCreateSerializer,
     TriggerAdjudicationSerializer, TriggerClusteringSerializer
 )
-from apps.scans.serializers import RepositorySerializer
+from apps.organizations.serializers import RepositorySerializer
 
 
 @pytest.mark.django_db
