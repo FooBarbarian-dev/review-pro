@@ -13,19 +13,26 @@ echo "========================================="
 echo "Starting setup and test workflow..."
 echo "========================================="
 
-# Step 0: Upgrade dependencies (optional, keeps them current)
+# Step 0: Check langroid version (critical for LLM features)
 echo ""
-echo "Step 0/4: Upgrading dependencies..."
+echo "Step 0/3: Checking langroid version..."
 echo "-----------------------------------------"
-if pixi upgrade; then
-    echo -e "${GREEN}✓ Step 0 PASSED: Dependencies upgraded successfully${NC}"
+if bash scripts/check_langroid.sh; then
+    echo -e "${GREEN}✓ Step 0 PASSED: Langroid version is correct${NC}"
 else
-    echo -e "${YELLOW}⚠ Step 0 WARNING: Dependency upgrade had issues (continuing anyway)${NC}"
+    echo -e "${RED}✗ Step 0 FAILED: Langroid version mismatch${NC}"
+    echo ""
+    echo "Run these commands to fix:"
+    echo "  rm -rf .pixi"
+    echo "  pixi install"
+    echo ""
+    echo "Then run setup-and-test again."
+    exit 0
 fi
 
 # Step 1: Create initial migrations
 echo ""
-echo "Step 1/4: Creating initial migrations..."
+echo "Step 1/3: Creating initial migrations..."
 echo "-----------------------------------------"
 if pixi run setup-migrations; then
     echo -e "${GREEN}✓ Step 1 PASSED: Migrations created successfully${NC}"
@@ -37,7 +44,7 @@ fi
 
 # Step 2: Apply migrations
 echo ""
-echo "Step 2/4: Applying migrations..."
+echo "Step 2/3: Applying migrations..."
 echo "-----------------------------------------"
 if pixi run migrate; then
     echo -e "${GREEN}✓ Step 2 PASSED: Migrations applied successfully${NC}"
@@ -51,7 +58,7 @@ fi
 
 # Step 3: Run tests
 echo ""
-echo "Step 3/4: Running tests..."
+echo "Step 3/3: Running tests..."
 echo "-----------------------------------------"
 if pixi run test; then
     echo -e "${GREEN}✓ Step 3 PASSED: All tests passed${NC}"
