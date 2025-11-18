@@ -121,6 +121,7 @@ test = "pytest backend/"
 test-cov = "pytest backend/ --cov=backend/apps --cov-report=html --cov-report=term"
 test-verbose = "pytest backend/ -v"
 test-failed = "pytest backend/ --lf"                                                # Run last failed tests
+setup-and-test = "bash scripts/setup_and_test.sh"  # Full setup: migrations + migrate + test
 
 # Code quality
 format = { depends-on = ["format-black", "format-isort"] }
