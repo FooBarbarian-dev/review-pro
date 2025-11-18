@@ -121,7 +121,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+# STATICFILES_DIRS = [BASE_DIR / 'static']  # Commented out - directory doesn't exist
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -229,6 +229,7 @@ SOCIAL_AUTH_GITHUB_SECRET = env('GITHUB_CLIENT_SECRET', default='')
 SOCIAL_AUTH_GITHUB_SCOPE = ['user:email', 'read:org']
 
 AUTHENTICATION_BACKENDS = (
+    'axes.backends.AxesStandaloneBackend',  # django-axes 8.0+ backend
     'social_core.backends.github.GithubOAuth2',
     'django.contrib.auth.backends.ModelBackend',
 )
@@ -256,7 +257,8 @@ RATELIMIT_USE_CACHE = 'default'
 # Django Axes Configuration (brute force protection)
 AXES_FAILURE_LIMIT = 5
 AXES_COOLOFF_TIME = timedelta(minutes=30)
-AXES_LOCK_OUT_BY_COMBINATION_USER_AND_IP = True
+# AXES_LOCK_OUT_BY_COMBINATION_USER_AND_IP = True  # Deprecated in django-axes 8.0+
+# Default behavior in 8.0+ is to use AXES_LOCKOUT_PARAMETERS (defaults to username + ip)
 
 # API Documentation
 SPECTACULAR_SETTINGS = {

@@ -48,7 +48,7 @@ This is a **research POC**, not a production security platform. See [REQUIREMENT
 - Django 5.0 + Django REST Framework
 - Temporal workflow orchestration (v1.5.0)
 - Langroid multi-agent framework (v0.1.297)
-- PostgreSQL 15+ (with Row-Level Security)
+- PostgreSQL 18+ (with Row-Level Security)
 - Qdrant vector database (v1.7.0)
 
 **Frontend:**
@@ -265,7 +265,7 @@ review-pro/
 │   ├── vite.config.ts          # Vite configuration
 │   └── tsconfig.json           # TypeScript configuration
 ├── docker-compose.yml          # Docker services (Postgres, Temporal, Qdrant)
-├── pixi.toml                   # Pixi project configuration
+├── pyproject.toml              # Python + Pixi project configuration
 ├── .env.example                # Environment template
 ├── GAP_ANALYSIS.md             # What was wrong in original implementation
 ├── REQUIREMENTS.md             # Complete specification

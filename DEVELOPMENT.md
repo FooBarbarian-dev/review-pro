@@ -21,7 +21,7 @@ This guide covers local development setup for Review Pro using modern tools: **P
 
 - **Python**: 3.11+ (managed by Pixi)
 - **Docker**: 24.0+ with Docker Compose V2
-- **PostgreSQL**: 15+ (via Docker or system package)
+- **PostgreSQL**: 18+ (via Docker or system package)
 - **Redis**: 7+ (via Docker or system package)
 - **Git**: 2.30+
 
@@ -163,8 +163,7 @@ pixi task list
 | `pixi run format` | `black && isort` | Format code |
 | `pixi run lint` | `flake8 && mypy` | Lint code |
 | `pixi run check` | Format + Lint + Test | Full check before commit |
-| `pixi run celery-worker` | `celery -A config worker` | Start Celery worker |
-| `pixi run celery-beat` | `celery -A config beat` | Start Celery beat scheduler |
+| `pixi run temporal-worker` | Start Temporal worker | Start Temporal worker |
 | `pixi run docker-up` | `docker compose up -d` | Start infrastructure |
 | `pixi run docker-down` | `docker compose down` | Stop infrastructure |
 
@@ -287,21 +286,14 @@ pixi run check
 pixi run format-black --check --diff
 ```
 
-### Celery Workers
+### Temporal Workers
 
 ```bash
-# Start Celery worker only
-pixi run celery-worker
+# Start Temporal worker
+pixi run temporal-worker
 
-# Start Celery beat only (scheduled tasks)
-pixi run celery-beat
-
-# Start both worker and beat
-pixi run celery-all
-
-# Monitor Celery via Flower (requires flower package)
-celery -A config flower --workdir=backend
-# Access at http://localhost:5555
+# Monitor Temporal workflows via Temporal UI
+# Access at http://localhost:8233
 ```
 
 ### Static Files
