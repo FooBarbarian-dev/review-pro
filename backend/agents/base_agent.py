@@ -10,7 +10,7 @@ from typing import Optional
 
 from langroid.agent.chat_agent import ChatAgent, ChatAgentConfig
 from langroid.language_models.openai_gpt import OpenAIChatModel, OpenAIGPTConfig
-from langroid.language_models.anthropic_gpt import AnthropicModel, AnthropicConfig
+
 from langroid.utils.configuration import Settings
 
 logger = logging.getLogger(__name__)
@@ -76,12 +76,13 @@ class AgentFactory:
             Configured ChatAgent instance
         """
         # Configure Anthropic LLM
-        llm_config = AnthropicConfig(
-            chat_model=model,
+        # Configure Anthropic LLM
+        llm_config = OpenAIGPTConfig(
+            chat_model=f"litellm/{model}",
             chat_context_length=200000,  # Claude context window
             temperature=temperature,
             max_output_tokens=max_tokens,
-            api_key=os.environ.get('ANTHROPIC_API_KEY'),
+            # api_key=os.environ.get('ANTHROPIC_API_KEY'), # litellm reads from env
         )
 
         # Configure agent

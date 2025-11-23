@@ -70,6 +70,29 @@ class ScanCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError("Repository not found")
         return value
 
+    def create(self, validated_data):
+        """Create a new scan instance."""
+        repository_id = validated_data.pop('repository_id')
+        repository = Repository.objects.get(id=repository_id)
+        
+        # Get or create branch
+        branch_name = validated_data.pop('branch', repository.default_branch)
+        # We don't have SHA for branch creation if it's new, but we can update it later or use scan commit_sha
+        branch, _ = Branch.objects.get_or_create(
+            repository=repository,
+            name=branch_name,
+            defaults={'sha': validated_data.get('commit_sha', '')}
+        )
+        
+        # Create scan
+        scan = Scan.objects.create(
+            organization=repository.organization,
+            repository=repository,
+            branch=branch,
+            **validated_data
+        )
+        return scan
+
 
 class TriggerAdjudicationSerializer(serializers.Serializer):
     """Serializer for triggering LLM adjudication."""

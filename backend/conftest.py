@@ -79,7 +79,6 @@ def repository(organization):
         name='test-repo',
         full_name='test-org/test-repo',
         github_repo_id='123456',
-        clone_url='https://github.com/test-org/test-repo.git'
     )
 
 

@@ -97,9 +97,8 @@ class TestScanViewSet:
         }
 
         data = {
-            'organization': str(organization.id),
-            'repository': str(repository.id),
-            'branch': str(branch.id),
+            'repository_id': str(repository.id),
+            'branch': branch.name,
             'commit_sha': 'new123'
         }
 
@@ -114,9 +113,8 @@ class TestScanViewSet:
         mock_workflow.side_effect = Exception('Temporal connection failed')
 
         data = {
-            'organization': str(organization.id),
-            'repository': str(repository.id),
-            'branch': str(branch.id),
+            'repository_id': str(repository.id),
+            'branch': branch.name,
             'commit_sha': 'fail123'
         }
 

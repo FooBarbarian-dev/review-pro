@@ -34,5 +34,6 @@ def scan_post_save(sender, instance, created, **kwargs):
     Update quota usage when scan is created or completed.
     """
     if created:
-        from .tasks import update_quota_usage
-        update_quota_usage.delay(instance.organization.id, instance.id)
+        # from .tasks import update_quota_usage
+        # update_quota_usage.delay(instance.organization.id, instance.id)
+        pass

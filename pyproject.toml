@@ -47,6 +47,7 @@ langroid = ">=0.59.19, <0.60"
 anthropic = ">=0.73.0, <0.74"
 openai = ">=2.8.1, <3"
 google-generativeai = ">=0.8.5, <0.9"
+litellm = ">=1.0.0"
 
 # Vector Database
 qdrant-client = ">=1.16.0, <2"
@@ -80,7 +81,7 @@ pytest = ">=9.0.1, <10"
 pytest-django = ">=4.11.1, <5"
 pytest-cov = ">=7.0.0, <8"
 pytest-mock = ">=3.15.1, <4"
-pytest-asyncio = ">=0.24.0, <0.25"
+pytest-asyncio = ">=1.3.0, <2"
 factory-boy = ">=3.3.3, <4"
 faker = ">=18.13.0, <19"
 black = ">=25.11.0, <26"
@@ -210,6 +211,7 @@ sections = [
 # pytest configuration
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
+pythonpath = "backend"
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
